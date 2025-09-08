@@ -1,0 +1,7 @@
+/vendor/
+/runtime/
+/web/assets/
+/db_data/
+.env
+*.pem
+

@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    container_name: yii2-app
+    ports:
+      - "80:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: yii2db
+      DB_USER: yiiuser
+      DB_PASS: yiipass
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: yii2-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: yii2db
+      MYSQL_USER: yiiuser
+      MYSQL_PASSWORD: yiipass
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+
