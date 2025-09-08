@@ -35,3 +35,4 @@ jobs:
             sleep 6 &&
             docker exec -i yii2-app php yii migrate/up --interactive=0 || true
           '
+# trigger
