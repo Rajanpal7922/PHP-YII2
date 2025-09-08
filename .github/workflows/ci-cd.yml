@@ -8,31 +8,46 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout code (needed for actions, not copied to EC2)
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2️⃣ Start SSH agent
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Copy project to EC2
-        run: |
-          # create remote dir and copy files
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'rm -rf ~/yii2-app && mkdir -p ~/yii2-app'
-          scp -o StrictHostKeyChecking=no -r ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/yii2-app
+      # 3️⃣ Test SSH connection
+      - name: Test SSH connection
+        run: ssh -v -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'echo SSH OK'
 
-      - name: Build and restart containers, run migrations
+      # 4️⃣ Deploy on EC2 using git pull
+      - name: Deploy on EC2
         env:
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
+          REPO_URL: https://github.com/Rajanpal7922/PHP-YII2.git
         run: |
           ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+            # Make sure project directory exists
+            mkdir -p ~/yii2-app &&
             cd ~/yii2-app &&
-            docker compose down &&
-            docker compose up -d --build &&
-            # wait a few seconds for containers to be healthy
-            sleep 6 &&
+
+            # Clone repo if first time, else pull latest changes
+            if [ ! -d .git ]; then
+              git clone ${REPO_URL} .
+            else
+              git reset --hard
+              git pull origin master
+            fi
+
+            # Rebuild Docker containers
+            docker compose down
+            docker compose up -d --build
+            sleep 6
+
+            # Run Yii2 migrations
             docker exec -i yii2-app php yii migrate/up --interactive=0 || true
           '
-# trigger
+
